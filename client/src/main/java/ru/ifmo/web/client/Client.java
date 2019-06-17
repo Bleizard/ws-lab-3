@@ -7,13 +7,19 @@ import ru.ifmo.web.client.util.Command;
 
 import javax.xml.datatype.DatatypeFactory;
 import javax.xml.datatype.XMLGregorianCalendar;
+import javax.xml.ws.BindingProvider;
+import javax.xml.ws.handler.MessageContext;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URL;
 import java.text.SimpleDateFormat;
+import java.util.Collections;
 import java.util.Date;
 import java.util.GregorianCalendar;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.TimeZone;
 
 
@@ -54,12 +60,14 @@ public class Client {
                                 .stream().map(Client::userToString).forEach(System.out::println);
                         break;
                     case INSERT:
+                        addBasicHeader(userPort);
                         System.out.println("Введите поля нового пользователя:");
                         userDTO = readUser(reader);
                         System.out.println("Пользоваетль успешно добавлен. Его id: " + userPort.insert(userDTO.getLogin(), userDTO.getPassword(),
                                 userDTO.getEmail(), userDTO.getGender(), userDTO.getRegisterDate()));
                         break;
                     case UPDATE:
+                        addBasicHeader(userPort);
                         System.out.print("Введите id пользователя, которого хотите изменить: ");
                         id = readLong(reader);
                         System.out.println("Введите новые поля пользователя");
@@ -75,6 +83,7 @@ public class Client {
                         );
                         break;
                     case DELETE:
+                        addBasicHeader(userPort);
                         System.out.print("Введите id пользователя, которого хотите удалить: ");
                         id = readLong(reader);
                         System.out.println(userPort.delete(id));
@@ -87,6 +96,16 @@ public class Client {
                 System.out.println("Попробуй ещё раз!");
             }
         }
+    }
+
+    private static void  addBasicHeader(UsersService usersService) {
+        Map<String, Object> req_ctx = ((BindingProvider)usersService).getRequestContext();
+        req_ctx.put(BindingProvider.ENDPOINT_ADDRESS_PROPERTY, "http://localhost:8080/users?wsdl");
+
+        Map<String, List<String>> headers = new HashMap<String, List<String>>();
+        headers.put("Username", Collections.singletonList("izard"));
+        headers.put("Password", Collections.singletonList("1234"));
+        req_ctx.put(MessageContext.HTTP_REQUEST_HEADERS, headers);
     }
 
     private static UserDTO readUser(BufferedReader reader) {
