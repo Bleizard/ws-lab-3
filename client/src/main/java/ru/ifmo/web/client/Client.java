@@ -12,6 +12,7 @@ import javax.xml.ws.handler.MessageContext;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.Collections;
@@ -24,11 +25,17 @@ import java.util.TimeZone;
 
 
 public class Client {
-    public static void main(String... args) throws SQLException_Exception, IOException {
-        URL url = new URL("http://localhost:8080/users?wsdl");
-        Users usersService = new Users(url);
-        UsersService userPort = usersService.getUsersServicePort();
+    private static final ThreadLocal<Users> USERS_THREAD_LOCAL = new ThreadLocal<>();
+    private static final String SERVICE_WSDL_URL = "http://localhost:8080/users?wsdl";
 
+    public static void main(String... args) throws SQLException_Exception, IOException {
+        Users usersService = getService();
+        if (usersService == null) {
+            System.out.println("Неправильно задан URL на котором размещен wsdl севриса");
+            System.exit(-1);
+        }
+        UsersService userPort = usersService.getUsersServicePort();
+        Thread thread = Thread.currentThread();
         BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
         int currentState = 0;
         Command command;
@@ -96,6 +103,22 @@ public class Client {
                 System.out.println("Попробуй ещё раз!");
             }
         }
+    }
+
+    private static Users getService() {
+        Users users = USERS_THREAD_LOCAL.get();
+        if (users == null) {
+            URL url = null;
+            try {
+                url = new URL(SERVICE_WSDL_URL);
+            } catch (MalformedURLException e) {
+                e.printStackTrace();
+                return null;
+            }
+            users = new Users(url);
+            USERS_THREAD_LOCAL.set(users);
+        }
+        return users;
     }
 
     private static void  addBasicHeader(UsersService usersService) {
